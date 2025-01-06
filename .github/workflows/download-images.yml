@@ -5,6 +5,9 @@ on:
     - cron: '0 0 * * *'  # 每天凌晨执行
   workflow_dispatch:  # 手动触发
 
+env:
+  OUTPUT_DIR: output
+
 jobs:
   download-and-generate:
     runs-on: ubuntu-latest
@@ -55,17 +58,18 @@ jobs:
           python .github/tools/generate_emby_icons.py \
             -o "$GITHUB_OWNER" \
             -r "$GITHUB_REPO" \
-            -b "$GITHUB_BRANCH" || { echo "❌ JSON generation failed."; exit 1; }
+            -b "$GITHUB_BRANCH" \
+            --output "$OUTPUT_DIR"  || { echo "❌ JSON generation failed."; exit 1; }
 
       - name: Verify output
         run: |
           set -e
           echo "Verifying JSON output..."
-          if [ ! -f output.json ]; then
-            echo "❌ JSON generation failed: output.json not found."
+          if [ ! -f "$OUTPUT_DIR/output.json" ]; then
+            echo "❌ JSON generation failed: $OUTPUT_DIR/output.json not found."
             exit 1
           fi
-          echo "✅ Output JSON generated successfully: output.json"
+          echo "✅ Output JSON generated successfully: $OUTPUT_DIR/output.json"
 
       - name: Commit and Push Changes
         env:

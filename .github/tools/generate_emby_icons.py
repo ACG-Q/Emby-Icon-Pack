@@ -22,16 +22,19 @@ def write_json(path, content):
 def get_image_files(folder_path):
     """
     获取指定文件夹及其所有子文件夹中的所有图片文件，支持的格式为 PNG、JPG、JPEG 和 GIF，
-    并返回相对于根目录的文件路径。
+    并返回相对于根目录的父目录的文件路径。
     """
     image_files = []
+    # 获取 folder_path 的父目录
+    parent_folder_path = os.path.dirname(folder_path)
+    
     # 遍历所有子目录及文件
     for root, dirs, files in os.walk(folder_path):
         # 遍历每个文件，如果是图片文件则添加到 image_files 列表中
         for file in files:
             if file.lower().endswith((".png", ".jpg", ".jpeg", ".gif")):
-                # 获取相对于根目录的文件路径
-                relative_path = os.path.relpath(os.path.join(root, file), folder_path)
+                # 获取相对于父目录的文件路径
+                relative_path = os.path.relpath(os.path.join(root, file), parent_folder_path)
                 relative_path = relative_path.replace(os.sep, '/')
                 image_files.append(relative_path)
     return image_files
@@ -60,7 +63,7 @@ def generate_image_urls(image_files, proxy_data, repo, branch="main", owner="git
     return image_urls
 
 # 生成不使用代理的图标库 JSON 文件
-def generate_no_proxy_json(image_files, repo, output_file, branch, owner):
+def generate_no_proxy_json(image_files, repo, output_dir, branch, owner):
     """
     生成不使用代理的 JSON 文件，并写入指定路径。
     """
@@ -70,11 +73,12 @@ def generate_no_proxy_json(image_files, repo, output_file, branch, owner):
         "description": "不使用代理生成的 Emby 图标库",
         "icons": icons
     }
+    output_file = os.path.join(output_dir, "output.json")
     write_json(output_file, result)
     print(f"JSON 数据已生成到 {output_file}")
 
 # 生成带代理的图标库 JSON 文件
-def generate_proxy_json(image_files, config, repo, branch, owner):
+def generate_proxy_json(image_files, config, repo, output_dir, branch, owner):
     """
     根据代理配置生成带代理的 JSON 文件，并写入相应路径。
     """
@@ -87,7 +91,7 @@ def generate_proxy_json(image_files, config, repo, branch, owner):
             "description": f"通过 {proxy_name} 代理生成的 Emby 图标库",
             "icons": icons
         }
-        output_file = f"output_{proxy_name}.json"
+        output_file = os.path.join(output_dir, f"output_{proxy_name}.json")
         write_json(output_file, result)
         print(f"JSON 数据已生成到 {output_file}")
 
@@ -98,11 +102,16 @@ def main():
     parser.add_argument('-o', '--owner', type=str, required=True, help='仓库拥有者名称')
     parser.add_argument('-r', '--repo', type=str, required=True, help='当前仓库名称')
     parser.add_argument('-b', '--branch', type=str, default="main", help='分支名称，默认为 "main"')
+    parser.add_argument('--output', type=str, default="output", help='输出目录')
     args = parser.parse_args()
 
     # 定义路径
     config_path = "config.json"
     images_folder = "downloaded_images"
+    output_dir = args.output
+
+    # 确保输出目录存在
+    os.makedirs(output_dir, exist_ok=True)
 
     # 定义额外信息
     owner = args.owner  # 使用命令行传递的仓库拥有者名称
@@ -114,10 +123,10 @@ def main():
     image_files = get_image_files(images_folder)
 
     # 先生成不使用代理的 JSON 文件
-    generate_no_proxy_json(image_files, repo, "output.json", branch, owner)
+    generate_no_proxy_json(image_files, repo, output_dir, branch, owner)
 
     # 遍历代理规则，生成对应的 JSON 文件
-    generate_proxy_json(image_files, config, repo, branch, owner)
+    generate_proxy_json(image_files, config, repo, output_dir, branch, owner)
 
 if __name__ == "__main__":
     main()

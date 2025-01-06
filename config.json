@@ -23,13 +23,13 @@
             "proxy": "https://ghproxy.com/",
             "format": "{proxy}https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{file}"
         },
-        "fastgit": {
-            "proxy": "https://fastgit.org/",
-            "format": "{proxy}https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{file}"
-        },
         "jsdelivr": {
             "proxy": "https://cdn.jsdelivr.net/gh/",
-            "format": "{proxy}{owner}@{repo}/{branch}/{file}"
+            "format": "{proxy}{owner}/{repo}@{branch}/{file}"
+        },
+        "ghproxy.net": {
+            "proxy": "https://ghproxy.net/",
+            "format": "{proxy}https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{file}"
         }
     }
 }
