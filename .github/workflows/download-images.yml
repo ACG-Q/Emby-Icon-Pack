@@ -1,0 +1,82 @@
+name: Download and Generate Emby Icons
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # 每天凌晨执行
+  workflow_dispatch:  # 手动触发
+
+jobs:
+  download-and-generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}  # 使用 GitHub 提供的权限令牌
+
+      - name: Set up Python environment
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Python dependencies
+        run: |
+          set -e
+          python -m pip install --upgrade pip
+          python -m pip install -r .github/tools/requirements.txt || echo "⚠️ No dependencies file found."
+
+      - name: Download images
+        run: |
+          set -e
+          echo "Downloading images..."
+          python .github/tools/download-image.py || { echo "❌ Error downloading images."; exit 1; }
+      
+      - name: Commit and Push Changes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -e
+          echo "Committing and pushing changes..."
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add downloaded_images
+          git commit -m "Update Emby icons - $(date +'%Y-%m-%d') [skip ci]" || echo "⚠️ No changes to commit."
+          git push origin ${{ github.ref_name }}
+
+      - name: Generate Emby Icons JSON
+        env:
+          GITHUB_OWNER: "${{ github.repository_owner }}"
+          GITHUB_REPO: "${{ github.event.repository.name }}"
+          GITHUB_BRANCH: "${{ github.ref_name }}"
+        run: |
+          set -e
+          echo "Generating JSON files..."
+          python .github/tools/generate_emby_icons.py \
+            -o "$GITHUB_OWNER" \
+            -r "$GITHUB_REPO" \
+            -b "$GITHUB_BRANCH" || { echo "❌ JSON generation failed."; exit 1; }
+
+      - name: Verify output
+        run: |
+          set -e
+          echo "Verifying JSON output..."
+          if [ ! -f output.json ]; then
+            echo "❌ JSON generation failed: output.json not found."
+            exit 1
+          fi
+          echo "✅ Output JSON generated successfully: output.json"
+
+      - name: Commit and Push Changes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -e
+          echo "Committing and pushing changes..."
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add *.json
+          git commit -m "Auto-generate Emby Icons JSON [skip ci]" || echo "⚠️ No changes to commit."
+          git push origin ${{ github.ref_name }}
+
